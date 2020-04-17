@@ -264,44 +264,31 @@ public class RNDeviceModule extends ReactContextBaseJavaModule {
   @SuppressLint("HardwareIds")
   @ReactMethod(isBlockingSynchronousMethod = true)
   public String getMacAddressSync() {
-    WifiInfo wifiInfo = getWifiInfo();
-    String macAddress = "";
-    if (wifiInfo != null) {
-      macAddress = wifiInfo.getMacAddress();
-    }
+    BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+    String bluetoothMacAddress = "";
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M){
+        try {
+            Field mServiceField = bluetoothAdapter.getClass().getDeclaredField("mService");
+            mServiceField.setAccessible(true);
 
-    String permission = "android.permission.INTERNET";
-    int res = getReactApplicationContext().checkCallingOrSelfPermission(permission);
+            Object btManagerService = mServiceField.get(bluetoothAdapter);
 
-    if (res == PackageManager.PERMISSION_GRANTED) {
-      try {
-        List<NetworkInterface> all = Collections.list(NetworkInterface.getNetworkInterfaces());
-        for (NetworkInterface nif : all) {
-          if (!nif.getName().equalsIgnoreCase("wlan0")) continue;
-
-          byte[] macBytes = nif.getHardwareAddress();
-          if (macBytes == null) {
-            macAddress = "";
-          } else {
-
-            StringBuilder res1 = new StringBuilder();
-            for (byte b : macBytes) {
-              res1.append(String.format("%02X:",b));
+            if (btManagerService != null) {
+                bluetoothMacAddress = (String) btManagerService.getClass().getMethod("getAddress").invoke(btManagerService);
             }
+        } catch (NoSuchFieldException e) {
 
-            if (res1.length() > 0) {
-              res1.deleteCharAt(res1.length() - 1);
-            }
+        } catch (NoSuchMethodException e) {
 
-            macAddress = res1.toString();
-          }
+        } catch (IllegalAccessException e) {
+
+        } catch (InvocationTargetException e) {
+
         }
-      } catch (Exception ex) {
-        // do nothing
-      }
+    } else {
+        bluetoothMacAddress = bluetoothAdapter.getAddress();
     }
-
-    return macAddress;
+    return bluetoothMacAddress;
   }
 
   @ReactMethod
